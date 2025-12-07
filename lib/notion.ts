@@ -26,7 +26,7 @@ function parseNotionPageToDocument(page: any): Document {
 // Get all documents
 export async function getDocuments(): Promise<Document[]> {
   try {
-    const response = await notion.databases.query({
+    const response = await (notion.databases as any).query({
       database_id: DATABASE_ID,
       sorts: [
         {
@@ -46,7 +46,7 @@ export async function getDocuments(): Promise<Document[]> {
 // Get single document by ID
 export async function getDocument(documentId: string): Promise<Document | null> {
   try {
-    const page = await notion.pages.retrieve({ page_id: documentId });
+    const page: any = await notion.pages.retrieve({ page_id: documentId });
     return parseNotionPageToDocument(page);
   } catch (error) {
     console.error('Error fetching document:', error);
@@ -59,7 +59,7 @@ export async function getDocumentVersions(documentId: string): Promise<DocumentV
   try {
     // In a real implementation, versions would be stored in a separate database or as page blocks
     // For this demo, we'll retrieve from page content blocks
-    const blocks = await notion.blocks.children.list({
+    const blocks: any = await notion.blocks.children.list({
       block_id: documentId,
     });
 
@@ -69,26 +69,27 @@ export async function getDocumentVersions(documentId: string): Promise<DocumentV
     // This is a simplified version - in production, you'd have a structured format
     let currentVersion: Partial<DocumentVersion> | null = null;
     
-    for (const block: any of blocks.results) {
-      if (block.type === 'heading_2') {
+    for (const block of blocks.results) {
+      const typedBlock: any = block;
+      if (typedBlock.type === 'heading_2') {
         if (currentVersion && currentVersion.version) {
           versions.push(currentVersion as DocumentVersion);
         }
-        const heading = block.heading_2?.rich_text?.[0]?.plain_text || '';
+        const heading = typedBlock.heading_2?.rich_text?.[0]?.plain_text || '';
         if (heading.startsWith('Version ')) {
           currentVersion = {
-            id: block.id,
+            id: typedBlock.id,
             documentId,
             version: heading.replace('Version ', ''),
-            uploadedAt: block.created_time,
+            uploadedAt: typedBlock.created_time,
             uploadedBy: 'System',
             changeLog: '',
             fileName: '',
             fileUrl: '',
           };
         }
-      } else if (currentVersion && block.type === 'paragraph') {
-        const text = block.paragraph?.rich_text?.[0]?.plain_text || '';
+      } else if (currentVersion && typedBlock.type === 'paragraph') {
+        const text = typedBlock.paragraph?.rich_text?.[0]?.plain_text || '';
         if (text.startsWith('File:')) {
           currentVersion.fileName = text.replace('File:', '').trim();
         } else if (text.startsWith('URL:')) {
@@ -115,7 +116,7 @@ export async function getDocumentVersions(documentId: string): Promise<DocumentV
 // Get comments from page
 export async function getComments(documentId: string, isOwner: boolean = false): Promise<Comment[]> {
   try {
-    const comments = await notion.comments.list({
+    const comments: any = await notion.comments.list({
       block_id: documentId,
     });
 
@@ -127,7 +128,7 @@ export async function getComments(documentId: string, isOwner: boolean = false):
       isPrivate: comment.rich_text?.[0]?.plain_text?.includes('[PRIVATE]') || false,
       createdAt: comment.created_time,
       toMD: comment.rich_text?.[0]?.plain_text?.includes('[TO MD]') || false,
-    })).filter(comment => {
+    })).filter((comment: Comment) => {
       // Filter private comments for non-owners
       if (!isOwner && comment.isPrivate) {
         return false;
@@ -161,7 +162,7 @@ export async function createComment(
           },
         },
       ],
-    });
+    } as any);
   } catch (error) {
     console.error('Error creating comment:', error);
     throw error;
@@ -217,7 +218,7 @@ export async function addDocumentVersion(
         CurrentVersion: {
           rich_text: [{ text: { content: version } }],
         },
-      },
+      } as any,
     });
   } catch (error) {
     console.error('Error adding version:', error);

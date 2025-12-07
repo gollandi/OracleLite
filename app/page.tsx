@@ -1,11 +1,12 @@
 import { getDocuments } from '@/lib/notion';
+import { Document } from '@/types';
 import DocumentCard from '@/components/DocumentCard';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  let documents = [];
-  let error = null;
+  let documents: Document[] = [];
+  let error: string | null = null;
 
   try {
     documents = await getDocuments();
